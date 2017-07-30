@@ -65,10 +65,10 @@ def _mk_label(mapper, show_operations, show_attributes, show_datatypes,
         cell_content = '<BR ALIGN="LEFT"/>'.join(
             '%s(%s)' % (name, ", ".join(
                 default is _mk_label and ("%s") % arg or ("%s=%s" % (arg,repr(default))) for default,arg in
-                zip((func.func_defaults
-                     and len(func.func_code.co_varnames)-1-(len(func.func_defaults) or 0)
-                     or func.func_code.co_argcount-1)*[_mk_label]+list(func.func_defaults or []),
-                     func.func_code.co_varnames[1:])
+                zip((func.__defaults__
+                     and len(func.__code__.co_varnames)-1-(len(func.__defaults__) or 0)
+                     or func.__code__.co_argcount-1)*[_mk_label]+list(func.__defaults__ or []),
+                     func.__code__.co_varnames[1:])
                 )
             )
             for name,func in mapper.class_.__dict__.items()
