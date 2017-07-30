@@ -83,6 +83,24 @@ def escape(name):
     return '"%s"' % name
 
 
+def multiplicity_indicator(prop, show_multiplicity_one):
+    if prop.uselist:
+        return ' *'
+    if hasattr(prop, 'local_side'):
+        cols = prop.local_side
+    else:
+        cols = prop.local_columns
+    if any(col.nullable for col in cols):
+        return ' 0..1'
+    if show_multiplicity_one:
+        return ' 1'
+    return ''
+
+
+def calc_label(src, dest=None, show_multiplicity_one):
+    return '+{}{}'.format(src.key, multiplicity_indicator(src, show_multiplicity_one))
+
+
 def create_uml_graph(mappers, show_operations=True, show_attributes=True,
                      show_inherited=True, show_multiplicity_one=False,
                      show_datatypes=True, linewidth=1.0, font="Bitstream-Vera Sans"):
@@ -111,33 +129,21 @@ def create_uml_graph(mappers, show_operations=True, show_attributes=True,
                 else:
                     relations.add(frozenset([loader]))
 
+    _calc_label = partial(calc_label, show_multiplicity_one=show_multiplicity_one)
+
     for relation in relations:
         #if len(loaders) > 2:
         #    raise Exception("Warning: too many loaders for join %s" % join)
         args = {}
-        def multiplicity_indicator(prop):
-            if prop.uselist:
-                return ' *'
-            if hasattr(prop, 'local_side'):
-                cols = prop.local_side
-            else:
-                cols = prop.local_columns
-            if any(col.nullable for col in cols):
-                return ' 0..1'
-            if show_multiplicity_one:
-                return ' 1'
-            return ''
 
         if len(relation) == 2:
             src, dest = relation
             from_name = escape(src.parent.class_.__name__)
             to_name = escape(dest.parent.class_.__name__)
 
-            def calc_label(src,dest):
-                return '+' + src.key + multiplicity_indicator(src)
-            args['headlabel'] = calc_label(src,dest)
+            args['headlabel'] = _calc_label(src,dest)
 
-            args['taillabel'] = calc_label(dest,src)
+            args['taillabel'] = _calc_label(dest,src)
             args['arrowtail'] = 'none'
             args['arrowhead'] = 'none'
             args['constraint'] = False
@@ -145,7 +151,7 @@ def create_uml_graph(mappers, show_operations=True, show_attributes=True,
             prop, = relation
             from_name = escape(prop.parent.class_.__name__)
             to_name = escape(prop.mapper.class_.__name__)
-            args['headlabel'] = '+%s%s' % (prop.key, multiplicity_indicator(prop))
+            args['headlabel'] = _calc_label(prop)
             args['arrowtail'] = 'none'
             args['arrowhead'] = 'vee'
 
