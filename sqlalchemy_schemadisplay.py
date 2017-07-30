@@ -83,17 +83,27 @@ def escape(name):
     return '"%s"' % name
 
 
-def create_uml_graph(mappers, show_operations=True, show_attributes=True, show_inherited=True, show_multiplicity_one=False, show_datatypes=True, linewidth=1.0, font="Bitstream-Vera Sans"):
-    graph = pydot.Dot(prog='neato',mode="major",overlap="0", sep="0.01",dim="3", pack="True", ratio=".75")
+def create_uml_graph(mappers, show_operations=True, show_attributes=True,
+                     show_inherited=True, show_multiplicity_one=False,
+                     show_datatypes=True, linewidth=1.0, font="Bitstream-Vera Sans"):
+    graph = pydot.Dot(prog='neato', mode="major", overlap="0", sep="0.01", dim="3",
+                      pack="True", ratio=".75")
     relations = set()
     for mapper in mappers:
+        label = _mk_label(mapper, show_operations, show_attributes, show_datatypes, show_inherited, linewidth)
         graph.add_node(pydot.Node(escape(mapper.class_.__name__),
-            shape="plaintext", label=_mk_label(mapper, show_operations, show_attributes, show_datatypes, show_inherited, linewidth),
+            shape="plaintext", label=label,
             fontname=font, fontsize="8.0",
         ))
         if mapper.inherits:
-            graph.add_edge(pydot.Edge(escape(mapper.inherits.class_.__name__),escape(mapper.class_.__name__),
-                arrowhead='none',arrowtail='empty', style="setlinewidth(%s)" % linewidth, arrowsize=str(linewidth)))
+            graph.add_edge(pydot.Edge(
+                escape(mapper.inherits.class_.__name__),
+                escape(mapper.class_.__name__),
+                arrowhead='none',
+                arrowtail='empty',
+                style="setlinewidth(%s)" % linewidth,
+                arrowsize=str(linewidth),
+            ))
         for loader in mapper.iterate_properties:
             if isinstance(loader, RelationshipProperty) and loader.mapper in mappers:
                 if hasattr(loader, 'reverse_property'):
@@ -139,9 +149,13 @@ def create_uml_graph(mappers, show_operations=True, show_attributes=True, show_i
             args['arrowtail'] = 'none'
             args['arrowhead'] = 'vee'
 
-        graph.add_edge(pydot.Edge(from_name,to_name,
-            fontname=font, fontsize="7.0", style="setlinewidth(%s)"%linewidth, arrowsize=str(linewidth),
-            **args)
+        graph.add_edge(pydot.Edge(
+            from_name,to_name,
+            fontname=font,
+            fontsize="7.0",
+            style="setlinewidth(%s)" % linewidth,
+            arrowsize=str(linewidth),
+            **args
         )
 
     return graph
@@ -174,10 +188,11 @@ def _render_table_html(table, metadata, show_indexes, show_datatypes):
         if indexes and show_indexes:
             yield tr(td("", border=1, cellpadding=0))
             for index, defin in indexes.items():
-                ilabel = 'UNIQUE' in defin and 'UNIQUE ' or 'INDEX '
+                ilabel = 'UNIQUE ' if 'UNIQUE' in defin else 'INDEX '
                 ilabel += defin[defin.index('('):]
                 yield tr(td(content=ilabel, align="left"))
     yield '</TABLE>>'
+
 
 def create_schema_graph(tables=None, metadata=None, show_indexes=True, show_datatypes=True, font="Bitstream-Vera Sans",
     concentrate=True, relation_options={}, rankdir='TB'):
