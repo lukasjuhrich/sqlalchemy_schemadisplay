@@ -1,4 +1,5 @@
 # updated SQLA schema display to work with pydot 1.0.2
+from functools import partial, wraps
 
 from sqlalchemy.orm.properties import RelationshipProperty
 from sqlalchemy.orm import sync
@@ -6,6 +7,37 @@ import pydot
 import types
 
 __all__ = ['create_uml_graph', 'create_schema_graph', 'show_uml_graph', 'show_schema_graph']
+
+def string_builder(f):
+    """Simple decorator Joining an iterable return value"""
+    @wraps(f)
+    def wrapper(*a, **kw):
+        return "".join(f(*a, **kw))
+    return wrapper
+
+
+@string_builder
+def html_tag(element, content, **kwargs):
+    """Build a html tag
+
+    :param str element: The string identifier of the tag, like ``td``
+    :param str content: The content to be enclosed in the tags
+    :returns: The build html tag
+    :rtype: str
+    """
+    element = element.upper()
+    arg_string = " ".join('{k}="{v}"'.format(k=k.upper().replace("_", "-"),
+                                             v=str(v).upper())
+                          for k, v in kwargs.items())
+    yield ("<{} {}>".format(element, arg_string) if arg_string
+           else "<{}>".format(element))
+    yield from content
+    yield "</{}>".format(element)
+
+td = partial(html_tag, "td")
+tr = partial(html_tag, "tr")
+
+
 
 def _mk_label(mapper, show_operations, show_attributes, show_datatypes, show_inherited, bordersize):
     html = '<<TABLE CELLSPACING="0" CELLPADDING="1" BORDER="0" CELLBORDER="%d" ALIGN="LEFT"><TR><TD><FONT POINT-SIZE="10">%s</FONT></TD></TR>' % (bordersize, mapper.class_.__name__)
