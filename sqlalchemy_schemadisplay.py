@@ -83,6 +83,39 @@ def escape(name):
     return '"%s"' % name
 
 
+def edge_from_relation(relation, label_calculator):
+    args = {}
+
+    if len(relation) == 2:
+        src, dest = relation
+        from_name = escape(src.parent.class_.__name__)
+        to_name = escape(dest.parent.class_.__name__)
+
+        args['headlabel'] = label_calculator(src, dest)
+
+        args['taillabel'] = label_calculator(dest, src)
+        args['arrowtail'] = 'none'
+        args['arrowhead'] = 'none'
+        args['constraint'] = False
+    else:
+        prop, = relation
+        from_name = escape(prop.parent.class_.__name__)
+        to_name = escape(prop.mapper.class_.__name__)
+        args['headlabel'] = label_calculator(prop)
+        args['arrowtail'] = 'none'
+        args['arrowhead'] = 'vee'
+
+    return pydot.Edge(
+        from_name,
+        to_name,
+        fontname=font,
+        fontsize="7.0",
+        style="setlinewidth(%s)" % linewidth,
+        arrowsize=str(linewidth),
+        **args
+    )
+
+
 def multiplicity_indicator(prop, show_multiplicity_one):
     if prop.uselist:
         return ' *'
@@ -134,35 +167,8 @@ def create_uml_graph(mappers, show_operations=True, show_attributes=True,
     for relation in relations:
         #if len(loaders) > 2:
         #    raise Exception("Warning: too many loaders for join %s" % join)
-        args = {}
-
-        if len(relation) == 2:
-            src, dest = relation
-            from_name = escape(src.parent.class_.__name__)
-            to_name = escape(dest.parent.class_.__name__)
-
-            args['headlabel'] = _calc_label(src,dest)
-
-            args['taillabel'] = _calc_label(dest,src)
-            args['arrowtail'] = 'none'
-            args['arrowhead'] = 'none'
-            args['constraint'] = False
-        else:
-            prop, = relation
-            from_name = escape(prop.parent.class_.__name__)
-            to_name = escape(prop.mapper.class_.__name__)
-            args['headlabel'] = _calc_label(prop)
-            args['arrowtail'] = 'none'
-            args['arrowhead'] = 'vee'
-
-        graph.add_edge(pydot.Edge(
-            from_name,to_name,
-            fontname=font,
-            fontsize="7.0",
-            style="setlinewidth(%s)" % linewidth,
-            arrowsize=str(linewidth),
-            **args
-        )
+        edge = edge_from_relation(relation, label_calculator=_calc_label)
+        graph.add_edge(edge)
 
     return graph
 
