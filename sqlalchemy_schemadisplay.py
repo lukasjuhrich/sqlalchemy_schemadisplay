@@ -161,18 +161,22 @@ def _render_table_html(table, metadata, show_indexes, show_datatypes):
              return "- %s : %s" % (col.name, format_col_type(col))
          else:
              return "- %s" % col.name
-    yield '<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0"><TR><TD ALIGN="CENTER">%s</TD></TR><TR><TD BORDER="1" CELLPADDING="0"></TD></TR>' % table.name
+    yield '<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0">'
+    yield tr(td(content=table.name, align="center"))
+    yield tr(td(content="", border=1, cellpadding="0"))
 
-    yield ''.join('<TR><TD ALIGN="LEFT" PORT="%s">%s</TD></TR>' % (col.name, format_col_str(col)) for col in table.columns)
+    for col in table.columns:
+        yield tr(td(content=format_col_str(col), align="left", port=col.name))
+
     if metadata.bind and isinstance(metadata.bind.dialect, PGDialect):
         # postgres engine doesn't reflect indexes
         indexes = dict((name,defin) for name,defin in metadata.bind.execute(text("SELECT indexname, indexdef FROM pg_indexes WHERE tablename = '%s'" % table.name)))
         if indexes and show_indexes:
-            yield '<TR><TD BORDER="1" CELLPADDING="0"></TD></TR>'
+            yield tr(td("", border=1, cellpadding=0))
             for index, defin in indexes.items():
                 ilabel = 'UNIQUE' in defin and 'UNIQUE ' or 'INDEX '
                 ilabel += defin[defin.index('('):]
-                yield '<TR><TD ALIGN="LEFT">%s</TD></TR>' % ilabel
+                yield tr(td(content=ilabel, align="left"))
     yield '</TABLE>>'
 
 def create_schema_graph(tables=None, metadata=None, show_indexes=True, show_datatypes=True, font="Bitstream-Vera Sans",
