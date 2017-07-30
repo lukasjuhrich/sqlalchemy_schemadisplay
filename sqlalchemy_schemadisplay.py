@@ -39,13 +39,13 @@ td = partial(html_tag, "td")
 tr = partial(html_tag, "tr")
 
 
+@string_builder
 def _mk_label(mapper, show_operations, show_attributes, show_datatypes,
               show_inherited, bordersize):
-    html = ""
-    html += "<"
-    html += '<TABLE CELLSPACING="0" CELLPADDING="1" BORDER="0" CELLBORDER="{}" ALIGN="LEFT">'.format(bordersize)
+    yield "<"
+    yield '<TABLE CELLSPACING="0" CELLPADDING="1" BORDER="0" CELLBORDER="{}" ALIGN="LEFT">'.format(bordersize)
 
-    html += tr(td(html_tag(element="font", content=mapper.class_.__name__, point_size=10)))
+    yield tr(td(html_tag(element="font", content=mapper.class_.__name__, point_size=10)))
     def format_col(col):
         colstr = '+%s' % (col.name)
         if show_datatypes:
@@ -58,7 +58,7 @@ def _mk_label(mapper, show_operations, show_attributes, show_datatypes,
         else:
             cols = mapper.columns
         cell_content = '<BR ALIGN="LEFT"/>'.join(format_col(col) for col in cols)
-        html += (tr(td(content=cell_content, align="LEFT")))
+        yield (tr(td(content=cell_content, align="LEFT")))
     else:
         [format_col(col) for col in sorted(mapper.columns, key=lambda col:not col.primary_key)]
     if show_operations:
@@ -75,9 +75,8 @@ def _mk_label(mapper, show_operations, show_attributes, show_datatypes,
             if isinstance(func, types.FunctionType)  # TODO: does not work with `partial`
             and func.__module__ == mapper.class_.__module__
         )
-        html += tr(td(cell_content, align="left"))
-    html+= '</TABLE>>'
-    return html
+        yield tr(td(cell_content, align="left"))
+    yield '</TABLE>>'
 
 
 def escape(name):
@@ -150,6 +149,7 @@ def create_uml_graph(mappers, show_operations=True, show_attributes=True, show_i
 from sqlalchemy.dialects.postgresql.base import PGDialect
 from sqlalchemy import Table, text
 
+@string_builder
 def _render_table_html(table, metadata, show_indexes, show_datatypes):
     def format_col_type(col):
         try:
@@ -161,20 +161,19 @@ def _render_table_html(table, metadata, show_indexes, show_datatypes):
              return "- %s : %s" % (col.name, format_col_type(col))
          else:
              return "- %s" % col.name
-    html = '<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0"><TR><TD ALIGN="CENTER">%s</TD></TR><TR><TD BORDER="1" CELLPADDING="0"></TD></TR>' % table.name
+    yield '<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0"><TR><TD ALIGN="CENTER">%s</TD></TR><TR><TD BORDER="1" CELLPADDING="0"></TD></TR>' % table.name
 
-    html += ''.join('<TR><TD ALIGN="LEFT" PORT="%s">%s</TD></TR>' % (col.name, format_col_str(col)) for col in table.columns)
+    yield ''.join('<TR><TD ALIGN="LEFT" PORT="%s">%s</TD></TR>' % (col.name, format_col_str(col)) for col in table.columns)
     if metadata.bind and isinstance(metadata.bind.dialect, PGDialect):
         # postgres engine doesn't reflect indexes
         indexes = dict((name,defin) for name,defin in metadata.bind.execute(text("SELECT indexname, indexdef FROM pg_indexes WHERE tablename = '%s'" % table.name)))
         if indexes and show_indexes:
-            html += '<TR><TD BORDER="1" CELLPADDING="0"></TD></TR>'
+            yield '<TR><TD BORDER="1" CELLPADDING="0"></TD></TR>'
             for index, defin in indexes.items():
                 ilabel = 'UNIQUE' in defin and 'UNIQUE ' or 'INDEX '
                 ilabel += defin[defin.index('('):]
-                html += '<TR><TD ALIGN="LEFT">%s</TD></TR>' % ilabel
-    html += '</TABLE>>'
-    return html
+                yield '<TR><TD ALIGN="LEFT">%s</TD></TR>' % ilabel
+    yield '</TABLE>>'
 
 def create_schema_graph(tables=None, metadata=None, show_indexes=True, show_datatypes=True, font="Bitstream-Vera Sans",
     concentrate=True, relation_options={}, rankdir='TB'):
