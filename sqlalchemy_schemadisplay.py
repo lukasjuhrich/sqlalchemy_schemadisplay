@@ -6,7 +6,8 @@ from sqlalchemy.orm import sync
 import pydot
 import types
 
-__all__ = ['create_uml_graph', 'create_schema_graph', 'show_uml_graph', 'show_schema_graph']
+__all__ = ['create_uml_graph', 'create_schema_graph', 'show_uml_graph',
+           'show_schema_graph']
 
 def string_builder(f):
     """Simple decorator Joining an iterable return value"""
@@ -38,9 +39,13 @@ td = partial(html_tag, "td")
 tr = partial(html_tag, "tr")
 
 
+def _mk_label(mapper, show_operations, show_attributes, show_datatypes,
+              show_inherited, bordersize):
+    html = ""
+    html += "<"
+    html += '<TABLE CELLSPACING="0" CELLPADDING="1" BORDER="0" CELLBORDER="{}" ALIGN="LEFT">'.format(bordersize)
 
-def _mk_label(mapper, show_operations, show_attributes, show_datatypes, show_inherited, bordersize):
-    html = '<<TABLE CELLSPACING="0" CELLPADDING="1" BORDER="0" CELLBORDER="%d" ALIGN="LEFT"><TR><TD><FONT POINT-SIZE="10">%s</FONT></TD></TR>' % (bordersize, mapper.class_.__name__)
+    html += tr(td(html_tag(element="font", content=mapper.class_.__name__, point_size=10)))
     def format_col(col):
         colstr = '+%s' % (col.name)
         if show_datatypes:
@@ -52,16 +57,25 @@ def _mk_label(mapper, show_operations, show_attributes, show_datatypes, show_inh
             cols = [c for c in mapper.columns if c.table == mapper.tables[0]]
         else:
             cols = mapper.columns
-        html += '<TR><TD ALIGN="LEFT">%s</TD></TR>' % '<BR ALIGN="LEFT"/>'.join(format_col(col) for col in cols)
+        cell_content = '<BR ALIGN="LEFT"/>'.join(format_col(col) for col in cols)
+        html += (tr(td(content=cell_content, align="LEFT")))
     else:
         [format_col(col) for col in sorted(mapper.columns, key=lambda col:not col.primary_key)]
     if show_operations:
-        html += '<TR><TD ALIGN="LEFT">%s</TD></TR>' % '<BR ALIGN="LEFT"/>'.join(
-            '%s(%s)' % (name,", ".join(default is _mk_label and ("%s") % arg or ("%s=%s" % (arg,repr(default))) for default,arg in
-                zip((func.func_defaults and len(func.func_code.co_varnames)-1-(len(func.func_defaults) or 0) or func.func_code.co_argcount-1)*[_mk_label]+list(func.func_defaults or []), func.func_code.co_varnames[1:])
-            ))
-            for name,func in mapper.class_.__dict__.items() if isinstance(func, types.FunctionType) and func.__module__ == mapper.class_.__module__
+        cell_content = '<BR ALIGN="LEFT"/>'.join(
+            '%s(%s)' % (name, ", ".join(
+                default is _mk_label and ("%s") % arg or ("%s=%s" % (arg,repr(default))) for default,arg in
+                zip((func.func_defaults
+                     and len(func.func_code.co_varnames)-1-(len(func.func_defaults) or 0)
+                     or func.func_code.co_argcount-1)*[_mk_label]+list(func.func_defaults or []),
+                     func.func_code.co_varnames[1:])
+                )
+            )
+            for name,func in mapper.class_.__dict__.items()
+            if isinstance(func, types.FunctionType)  # TODO: does not work with `partial`
+            and func.__module__ == mapper.class_.__module__
         )
+        html += tr(td(cell_content, align="left"))
     html+= '</TABLE>>'
     return html
 
