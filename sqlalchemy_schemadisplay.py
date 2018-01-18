@@ -83,7 +83,7 @@ def escape(name):
     return '"%s"' % name
 
 
-def edge_from_relation(relation, label_calculator):
+def edge_from_relation(relation, label_calculator, font, linewidth):
     args = {}
 
     if len(relation) == 2:
@@ -130,7 +130,7 @@ def multiplicity_indicator(prop, show_multiplicity_one):
     return ''
 
 
-def calc_label(src, dest=None, show_multiplicity_one):
+def calc_label(src, dest=None, show_multiplicity_one=False):
     return '+{}{}'.format(src.key, multiplicity_indicator(src, show_multiplicity_one))
 
 
@@ -167,7 +167,7 @@ def create_uml_graph(mappers, show_operations=True, show_attributes=True,
     for relation in relations:
         #if len(loaders) > 2:
         #    raise Exception("Warning: too many loaders for join %s" % join)
-        edge = edge_from_relation(relation, label_calculator=_calc_label)
+        edge = edge_from_relation(relation, label_calculator=_calc_label, font=font, linewidth=linewidth)
         graph.add_edge(edge)
 
     return graph
